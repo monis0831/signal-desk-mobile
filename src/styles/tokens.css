@@ -1,0 +1,89 @@
+/**
+ * tokens.css — the complete design token set from DESIGN.md.
+ *
+ * Dark only, on purpose: there is no light-mode branch anywhere in this app.
+ * Zero-chroma neutrals carry every surface; the only saturated colours are
+ * --primary (selected/live), --profit, --loss and --armed. Nothing else is
+ * allowed to carry colour — see PRODUCT.md principle 3.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- surfaces & ink -------------------------------------------------- */
+  --bg:            oklch(0.10 0 0);
+  --surface:       oklch(0.145 0 0);
+  --surface-2:     oklch(0.19 0 0);
+  --line:          oklch(0.26 0 0);
+
+  --ink:           oklch(0.96 0 0);
+  --ink-2:         oklch(0.74 0 0);
+  --ink-3:         oklch(0.58 0 0);
+
+  /* ---- brand & semantics ------------------------------------------------ */
+  --primary:       oklch(0.76 0.11 200);
+  --primary-ink:   oklch(0.12 0.03 200);
+  --profit:        oklch(0.78 0.15 150);
+  --loss:          oklch(0.70 0.19 25);
+  --armed:         oklch(0.80 0.15 70);
+  --focus:         oklch(0.76 0.11 200 / 0.55);
+
+  --backdrop:      oklch(0 0 0 / 0.6);
+
+  /* ---- type -------------------------------------------------------------
+   * Fixed rem scale, ratio ~1.2, no fluid clamp() per DESIGN.md. */
+  --t-xs:  0.75rem;   /* 12px — timestamps, hints */
+  --t-sm:  0.875rem;  /* 14px — secondary labels */
+  --t-md:  1rem;      /* 16px — body, rows, inputs (prevents iOS zoom) */
+  --t-lg:  1.25rem;   /* 20px — section headings */
+  --t-xl:  1.5rem;    /* 24px — view titles */
+  --t-2xl: 2rem;      /* 32px — the equity figure on Home, and nothing else */
+
+  --font-ui:   "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ---- spacing (4px base) ------------------------------------------------ */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+
+  /* ---- radius ------------------------------------------------------------ */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+
+  /* ---- motion -------------------------------------------------------------
+   * 150-250ms, ease-out-quint. State feedback only — see DESIGN.md Motion. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 250ms;
+
+  /* ---- z-index scale ------------------------------------------------------ */
+  --z-sticky:   10;
+  --z-tabbar:   20;
+  --z-backdrop: 30;
+  --z-sheet:    40;
+  --z-toast:    50;
+
+  /* ---- safe area ------------------------------------------------------------ */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Derived: fixed-height chrome, used to size scroll padding. */
+  --tabbar-h: 56px;
+  --header-h: 52px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 1ms;
+    --dur: 1ms;
+    --dur-slow: 1ms;
+  }
+}

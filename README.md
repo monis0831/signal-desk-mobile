@@ -1,0 +1,274 @@
+# Signal Desk Mobile
+
+An iPhone/iPad Progressive Web App that pairs with a running Signal Desk
+engine (`D:\t bot`, `api_server.py`) over its local HTTP + Server-Sent Events
+API. It is a remote control for the same trading bot the Windows desktop app
+drives — arm/disarm, manage positions, watch the signal feed, manage
+channels, and review history — rebuilt for a phone held one-handed, not a
+1400px window.
+
+Design system: see [`DESIGN.md`](./DESIGN.md) (visual tokens, components,
+motion) and [`PRODUCT.md`](./PRODUCT.md) (who it's for, why it looks the way
+it does). Both were the authority this app was built against.
+
+---
+
+## Stack
+
+Vite + React + TypeScript, matching `D:\t bot\desktop`'s own stack so code
+and idioms transfer between the two. No UI framework dependency beyond React
+itself; `@fontsource/inter` and `@fontsource/jetbrains-mono` are bundled
+locally (same reasoning as the desktop app: a PWA that needs Google Fonts to
+render text isn't really offline-capable).
+
+---
+
+## Running it
+
+```bash
+npm install
+npm run dev          # Vite on :5174, reachable from your phone over LAN (host: true)
+```
+
+Other scripts:
+
+| Script | What it does |
+|---|---|
+| `npm run build` | `tsc --noEmit` then `vite build` into `dist/` |
+| `npm run typecheck` | `tsc --noEmit` only |
+| `npm run preview` | serves the built `dist/` locally |
+| `npm run generate-assets` | regenerates every PNG icon/splash screen (see below) |
+
+`npm run dev` binds to all interfaces (`host: true` in `vite.config.ts`), so
+during development you can open `http://<your-computer's-LAN-IP>:5174` on
+the same phone the engine's machine is on, without deploying anywhere. For
+real use, `dist/` needs to be hosted somewhere HTTPS-reachable from wherever
+the phone is (Cloudflare Pages, Netlify, GitHub Pages, a VPS with nginx —
+anything that serves static files over HTTPS). **HTTPS is required for the
+service worker and for "Add to Home Screen" to behave as a real installed
+app on iOS**, even though the *engine* itself is plain HTTP.
+
+---
+
+## Pairing with the engine
+
+There is no login. `api_server.py` mints a fresh bearer token
+(`secrets.token_urlsafe(32)`) every time it starts, prints it once on stdout,
+and never writes it to disk — so "pairing" is the entire auth model:
+
+1. Start the engine so it prints its handshake line, e.g.:
+   ```
+   SIGNAL_DESK_READY {"port":54321,"token":"AbC123...","pid":1234,"data_dir":"..."}
+   ```
+   (Running it standalone: `python api_server.py --port 8765` from `D:\t bot`.
+   Running via the desktop app, the same handshake happens internally — you'd
+   need to add a way to surface port+token to yourself, e.g. a log line or a
+   small "show pairing info" affordance in the desktop app; today only the
+   Electron shell itself reads that handshake.)
+2. On the phone, open this app. First launch shows a **pairing sheet**
+   (non-dismissable — there's nowhere else to go yet).
+3. Enter the **base URL** — `http://<engine-machine-LAN-IP>:<port>` if the
+   phone and the engine are on the same Wi-Fi, e.g. `http://192.168.1.23:8765`.
+   `127.0.0.1` only works if the browser itself is running on the engine's own
+   machine, which defeats the point of a phone client — you need the engine
+   machine's real LAN address.
+4. Enter the **token** exactly as printed.
+5. Tap **Connect**. The app calls `GET /api/health` with that token before
+   saving anything, so a wrong URL or token is caught immediately with a
+   specific reason, not a silent failure.
+
+Pairing is stored in `localStorage` on the phone, so it survives closing and
+reopening the app. **The token is only valid until the engine restarts.**
+When it rotates, the next request gets a `401`, the app detects it
+specifically, and routes back to a pairing sheet with the reason spelled out
+rather than just failing. Re-pair from **More → Pairing**.
+
+---
+
+## Installing to an iPhone/iPad home screen
+
+1. Open the deployed HTTPS URL in **Safari** (not Chrome — "Add to Home
+   Screen" as a standalone app only works from Safari on iOS).
+2. Tap the Share icon → **Add to Home Screen** → Add.
+3. Launch it from the home screen icon. It opens full-screen, no browser
+   chrome, with its own splash screen — indistinguishable from an installed
+   app.
+
+What makes that work, all already wired up:
+
+- `manifest.webmanifest` — `display: standalone`, dark `background_color`/
+  `theme_color`, an `any`-purpose icon set plus a dedicated `maskable` icon.
+- `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style:
+  black-translucent`, and `apple-mobile-web-app-title` meta tags in
+  `index.html` — the trio iOS actually reads (it still ignores parts of the
+  web manifest spec).
+- `viewport-fit=cover` plus `env(safe-area-inset-*)` used throughout the CSS
+  (tab bar, header, sheets) so the notch/Dynamic Island and the home
+  indicator never overlap content.
+- A curated set of `apple-touch-startup-image` launch screens for current
+  iPhones and iPads, portrait and landscape (`public/splash/`, generated by
+  `scripts/generate-assets.mjs`).
+- A real service worker (`public/sw.js`) that precaches the shell and serves
+  it offline, registered from `src/main.tsx`.
+
+### Regenerating icons/splash screens
+
+`scripts/generate-assets.mjs` builds every PNG with zero image-library
+dependencies (a from-scratch PNG encoder over Node's built-in `zlib`, ~250
+lines) — no `sharp`/`canvas` native binary to worry about on a fresh machine.
+Run `npm run generate-assets` after changing the mark or palette in that
+file; the current mark is a simple three-candle uptick in the app's accent
+colour on its `--bg`. If the client wants a proper designed icon later,
+replace the files in `public/icons/` and `public/splash/` directly — nothing
+else needs to change as long as filenames match.
+
+---
+
+## What changes for the VPS deployment
+
+By design, **nothing in the code**. The entire engine address lives in one
+place: `lib/pairing.ts` (what's stored) and `lib/api.ts` (how it's used —
+`createApi({ baseUrl, token })`). When the engine moves to a Windows VPS
+behind HTTPS:
+
+1. Re-pair from **More → Pairing** with the new `https://` base URL and the
+   engine's current token. That's the only user-facing step.
+2. If the VPS engine now sits behind a reverse proxy, confirm it forwards
+   `GET /api/events` **without buffering** (the engine sets
+   `X-Accel-Buffering: no` for exactly this reason under nginx) and preserves
+   `Authorization` headers / the `?token=` query param for `EventSource`.
+3. CORS is already `Access-Control-Allow-Origin: *` on the engine side — no
+   change needed there; the bearer token is the actual security boundary
+   (see `api_server.py`'s own module docstring).
+4. If the token becomes longer-lived or acquired differently on the VPS
+   (e.g. a fixed token via `--token` instead of a random one per launch), the
+   pairing flow doesn't need to change — it already just stores whatever
+   token you give it.
+
+---
+
+## Architecture notes
+
+- **`src/lib/api.ts`** — the entire typed HTTP client, field-for-field
+  mirroring `api_server.py`'s serialisers (and cross-checked against the
+  desktop app's own `lib/api.ts`, which is generated against the same
+  server). One function, `createApi(conn)`, takes `{ baseUrl, token }` and
+  returns every endpoint as a typed method. This is the one file that would
+  need touching for an actual API contract change.
+- **`src/lib/store.tsx`** — one React context (`DeskProvider`/`useDesk`)
+  combining the SSE stream, the polled `/api/state` snapshot, and pairing
+  state. Positions pushed by the engine are trusted over the poll once the
+  first push lands, so a closed position can't flicker back into view — see
+  the comment in `usePositionsOrders.ts`.
+- **Views are one screen each**, sub-flows live in per-view subfolders
+  (`views/positions/`, `views/channels/`, `views/signals/`, `views/more/`).
+  Nothing in `src/views` exceeds ~250 lines; shared chrome (`Screen`,
+  `ViewHeader`, `DisconnectedBanner`) is factored out so each view is just
+  its own content.
+- **Every destructive action** (arm live, close a position, cancel an order,
+  clear a ladder, sign out of Telegram, forget pairing) goes through
+  `ConfirmSheet`, which requires a `consequence` string naming the actual
+  effect — there is no generic "Are you sure?" anywhere in the app.
+- **No candlestick chart.** The brief is explicit that a cramped, unusable
+  chart is worse than none on a phone. Home and History instead show a
+  clean SVG sparkline (`components/Sparkline.tsx`) alongside the real
+  numbers. `api.ts` still exposes `candles`/`quotes`/`streamSymbol` for a
+  future screen, but nothing calls them today.
+
+---
+
+## What I did NOT finish
+
+Being direct about the gaps against "everything the desktop app can do":
+
+1. **No initial credential setup.** Telegram `api_id`/`api_hash`/`phone` and
+   MT5 `login`/`password`/`server`/`terminal_path` have no form anywhere in
+   this app. Pairing assumes the engine has already been configured (by the
+   desktop app, or a hand-edited `config.json`) before a phone ever connects
+   to it. This felt like the right scope boundary for a *remote control* —
+   the brief's own priority list never mentions initial setup — but it means
+   a from-scratch first run still needs the desktop app or the config file
+   once.
+2. **Reporting configuration is read/action-only.** Status plus "send test",
+   "post summary now", "post past trades" all work against the real engine
+   endpoints. Turning reporting on, choosing its channel, or changing its
+   schedule (`reporting.*` config keys) has no UI here.
+3. **Ladder editing has no live "can this even split?" preview.** The
+   desktop app calls `/api/ladders/plan` as you type targets so it can say
+   "0.01 lots cannot be split 3 ways" before you save. This app's ladder
+   editor (in the position sheet) lets you add/remove/save/clear targets
+   against the real `/api/ladders/:ticket` endpoints, and shows an existing
+   ladder's own `viable`/`reason` fields — but it doesn't call
+   `ladderPlan` while you're editing, so a bad split is only discovered on
+   save (the server's error message explains it, but it isn't previewed).
+4. **No client-side tick-size/stop-distance validation.** `/api/limits`
+   exists in the client but nothing calls it. Editing SL/TP relies entirely
+   on the broker's own validation and the server's descriptive refusal
+   message — correct and honest, but less proactive than the desktop app's
+   drag-to-edit chart, which snapped to valid values as you dragged.
+5. **Push notifications are not implemented, and can't be cheaply.** The
+   live feed (SSE) only updates while the app is actually open and in the
+   foreground. iOS Safari does not keep a Server-Sent Events connection
+   alive once a home-screen PWA is backgrounded or suspended — there is no
+   workaround for that from inside the page itself. A genuinely "notify me
+   when a trade fires while my phone is in my pocket" experience needs Web
+   Push through APNs, a push subscription endpoint on the engine (or a
+   relay service, since the engine itself isn't reachable from Apple's push
+   servers on a home LAN), and user permission UI. That's a real backend
+   feature, not a frontend gap, and it's out of scope for what was asked.
+6. **Icons/splash are a generated placeholder mark**, not a designed logo —
+   see "Regenerating icons" above. Trivial to swap once there's real
+   branding.
+
+## What I had to infer rather than read directly
+
+- **Connection status strings.** I did not want to guess `"connected"` vs.
+  `"error"` vs. something else for the LEDs on Home/Connections, so I
+  checked directly: MT5 statuses are `"connecting" | "connected" | "error"`
+  (from `main.py`'s `connect_mt5`/`_heartbeat`), and Telegram statuses are
+  `"idle" | "connecting" | "auth_required" | "connected" | "disconnected" |
+  "error"` (from `telegram_listener.py`'s `STATUS_*` constants). Both are
+  handled; `auth_required` and `disconnected` render as the neutral/idle
+  dot colour with their real status word as the label, since neither is
+  strictly "healthy" or strictly "an error".
+- **Every other response shape** (positions, orders, history, ladders,
+  channel scans, config) was taken from `api_server.py`'s serialiser
+  functions (`signal_dict`, `result_dict`, `closed_trade_dict`, `stats_dict`,
+  the `Handlers` class) together with the desktop app's own
+  `desktop/src/lib/api.ts` types, which are the shipped, working client for
+  this exact server. I did not additionally read `market_data.py`,
+  `trade_history.py`, or `channel_scan.py` line by line — the serialisers in
+  `api_server.py` are the actual wire contract regardless of what those
+  modules compute internally, so that felt like the right place to stop.
+- **The 401 → re-pair flow** assumes a stale/wrong token is the only cause
+  of a 401 (true today, per `api_server.py`'s single bearer-token check). If
+  auth ever grows scopes or multiple tokens, `handleUnauthorized` in
+  `lib/store.tsx` is the one place that message would need to change.
+
+---
+
+## Verification
+
+Both ran clean, output pasted as observed (not summarised):
+
+```
+$ npm run typecheck
+
+> signal-desk-mobile@1.0.0 typecheck
+> tsc --noEmit
+
+$ npm run build
+
+> signal-desk-mobile@1.0.0 build
+> tsc --noEmit && vite build
+
+vite v5.4.21 building for production...
+✓ 73 modules transformed.
+dist/index.html                   5.33 kB │ gzip:  1.32 kB
+dist/assets/index-*.css          44.39 kB │ gzip: 18.57 kB
+dist/assets/index-*.js          206.77 kB │ gzip: 63.28 kB
+✓ built in ~1.1s
+```
+
+`npm run dev` was also started and confirmed serving `200 OK` with the
+expected HTML shell on `http://localhost:5174`.

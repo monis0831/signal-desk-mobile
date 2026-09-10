@@ -1,0 +1,905 @@
+/**
+ * components.css — every shared component style, built only from tokens.css.
+ * No component in this file introduces a colour, size, or radius that isn't
+ * one of the tokens: that constraint is what keeps the app looking like one
+ * system instead of an accretion of one-off screens.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* App shell                                                                   */
+/* -------------------------------------------------------------------------- */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+}
+
+/* iPad landscape: the tab bar becomes a left rail. Pure CSS, no JS layout
+   toggle, so there's no hydration flash between the two. */
+.rail-slot {
+  display: none;
+}
+
+@media (min-width: 900px) and (orientation: landscape) {
+  .app-shell {
+    flex-direction: row;
+  }
+  .app-main {
+    padding-bottom: var(--safe-bottom);
+  }
+  .rail-slot {
+    display: flex;
+  }
+  .tabbar-slot {
+    display: none;
+  }
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* View header                                                                 */
+/* -------------------------------------------------------------------------- */
+
+.view-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--header-h);
+  padding: var(--s-3) calc(var(--s-4) + var(--safe-right)) var(--s-3) calc(var(--s-4) + var(--safe-left));
+  padding-top: calc(var(--s-3) + var(--safe-top));
+  background: color-mix(in oklch, var(--bg) 92%, transparent);
+  backdrop-filter: none; /* explicit ban on glass panels — solid, not translucent blur */
+  border-bottom: 1px solid var(--line);
+}
+
+.view-header.at-top {
+  border-bottom-color: transparent;
+}
+
+.view-header h1 {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-xl);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-header .back {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  padding-right: var(--s-2);
+  color: var(--primary);
+  font-size: var(--t-md);
+  flex-shrink: 0;
+}
+
+.view-header .header-action {
+  flex-shrink: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  font-size: var(--t-md);
+  font-weight: 500;
+}
+
+.view-header .header-action:disabled {
+  color: var(--ink-3);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Connection / staleness indicator                                           */
+/* -------------------------------------------------------------------------- */
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ink-3);
+}
+
+.status-dot.ok { background: var(--primary); }
+.status-dot.error { background: var(--loss); }
+.status-dot.armed { background: var(--armed); }
+
+.status-dot.connecting {
+  background: transparent;
+  border: 1.5px solid var(--primary);
+  animation: pulse-ring 1.4s var(--ease) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.35; transform: scale(0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot.connecting { animation: none; opacity: 1; }
+}
+
+.stale-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: var(--t-xs);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.stale-pill.stale {
+  color: var(--armed);
+}
+
+.header-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Disconnected / offline banner — full width, not a toast                    */
+/* -------------------------------------------------------------------------- */
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) calc(var(--s-4) + var(--safe-left));
+  font-size: var(--t-sm);
+  font-weight: 500;
+  background: color-mix(in oklch, var(--loss) 18%, var(--surface));
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.banner.warn {
+  background: color-mix(in oklch, var(--armed) 18%, var(--surface));
+}
+
+.banner .status-dot {
+  margin-right: 2px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Grouped list (iOS inset style)                                             */
+/* -------------------------------------------------------------------------- */
+
+.list-section {
+  margin: 0 var(--s-4);
+}
+
+.list-section + .list-section {
+  margin-top: var(--s-5);
+}
+
+.list-section-label {
+  font-size: var(--t-xs);
+  color: var(--ink-3);
+  padding: 0 var(--s-2) var(--s-2);
+  font-weight: 500;
+}
+
+.list-group {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.list-section-note {
+  font-size: var(--t-xs);
+  color: var(--ink-3);
+  padding: var(--s-2) var(--s-2) 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 52px;
+  padding: var(--s-3) var(--s-4);
+  width: 100%;
+  background: transparent;
+  border-bottom: 1px solid var(--line);
+}
+
+.list-group > .row:last-child {
+  border-bottom: none;
+}
+
+/* The tappable region inside a row — a <button> when the row navigates, a
+   plain <div> otherwise. Kept separate from `.row` itself so an interactive
+   accessory (a Switch) can sit beside it without nesting inside a button. */
+.row-hit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  border-radius: var(--r-sm);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+button.row-hit:active {
+  background: var(--surface-2);
+}
+
+.row-hit-static {
+  cursor: default;
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row-title {
+  font-size: var(--t-md);
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-subtitle {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-value {
+  flex-shrink: 0;
+  text-align: right;
+  font-size: var(--t-md);
+  color: var(--ink-2);
+}
+
+.row-value-lg {
+  font-size: var(--t-2xl);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.row-chevron {
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+
+.row-disabled {
+  opacity: 0.5;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Position / signal specific row layout                                      */
+/* -------------------------------------------------------------------------- */
+
+.pos-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 64px;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+  width: 100%;
+  text-align: left;
+  background: transparent;
+}
+
+.list-group > .pos-row:last-child { border-bottom: none; }
+
+button.pos-row:active { background: var(--surface-2); }
+
+.pos-row-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pos-row-symbol {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 500;
+  font-size: var(--t-md);
+}
+
+.pos-row-levels {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-xs);
+  color: var(--ink-2);
+}
+
+.pos-row-right {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pos-row-pnl {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: var(--t-md);
+}
+
+.pos-row-lots {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-xs);
+  color: var(--ink-2);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Direction / outcome badges — text on a filled chip, colour only when it means something */
+/* -------------------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.badge.buy { color: var(--profit); }
+.badge.sell { color: var(--loss); }
+.badge.rejected { color: var(--loss); }
+.badge.armed { color: var(--armed); }
+.badge.live { color: var(--primary); }
+
+/* -------------------------------------------------------------------------- */
+/* P&L text — sign + colour, per format.money()                               */
+/* -------------------------------------------------------------------------- */
+
+.pnl {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pnl.up { color: var(--profit); }
+.pnl.down { color: var(--loss); }
+.pnl.muted { color: var(--ink-2); }
+
+.pnl-flash {
+  animation: flash-value var(--dur-slow) var(--ease);
+}
+
+@keyframes flash-value {
+  0% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Segmented control (arm control, filters)                                   */
+/* -------------------------------------------------------------------------- */
+
+.segmented {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmented button {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 999px;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.segmented button.active {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.segmented button.active.tone-armed {
+  color: var(--armed);
+}
+
+.segmented button.active.tone-primary {
+  color: var(--primary);
+}
+
+.segmented button:disabled {
+  opacity: 0.5;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Buttons                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  font-size: var(--t-md);
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--ink);
+  transition: opacity var(--dur-fast) var(--ease);
+  width: 100%;
+}
+
+.btn:active { opacity: 0.7; }
+.btn:disabled { opacity: 0.4; }
+
+.btn.primary {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+.btn.danger {
+  background: var(--loss);
+  color: oklch(0.12 0 0);
+}
+
+.btn.armed {
+  background: var(--armed);
+  color: oklch(0.12 0 0);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--primary);
+}
+
+.btn.auto { width: auto; }
+
+.btn-row {
+  display: flex;
+  gap: var(--s-3);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Bottom sheets                                                              */
+/* -------------------------------------------------------------------------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop);
+  z-index: var(--z-backdrop);
+  opacity: 0;
+  animation: fade-in var(--dur) var(--ease) forwards;
+}
+
+@keyframes fade-in {
+  to { opacity: 1; }
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-sheet);
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding-bottom: calc(var(--s-4) + var(--safe-bottom));
+  transform: translateY(100%);
+  animation: sheet-up var(--dur-slow) var(--ease) forwards;
+  box-shadow: none;
+}
+
+@keyframes sheet-up {
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: fade-in var(--dur) linear forwards; transform: none; }
+  .sheet-backdrop { animation: fade-in var(--dur) linear forwards; }
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: var(--s-2) auto;
+  flex-shrink: 0;
+}
+
+.sheet-head {
+  padding: 0 var(--s-4) var(--s-3);
+  flex-shrink: 0;
+}
+
+.sheet-head h2 {
+  font-size: var(--t-lg);
+}
+
+.sheet-head p {
+  margin-top: var(--s-1);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+.sheet-body {
+  overflow-y: auto;
+  padding: 0 var(--s-4);
+  flex: 1;
+}
+
+.sheet-foot {
+  padding: var(--s-4) var(--s-4) 0;
+  flex-shrink: 0;
+}
+
+.sheet-consequence {
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  font-size: var(--t-md);
+  font-weight: 500;
+  margin-bottom: var(--s-4);
+}
+
+.sheet-consequence.tone-armed { color: var(--armed); }
+.sheet-consequence.tone-danger { color: var(--loss); }
+
+/* -------------------------------------------------------------------------- */
+/* Tab bar / rail                                                             */
+/* -------------------------------------------------------------------------- */
+
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-tabbar);
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+.tabbar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tabbar-h);
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  position: relative;
+}
+
+.tabbar button.active {
+  color: var(--primary);
+}
+
+.tabbar .tab-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 20px);
+  min-width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* iPad landscape: rail replaces bottom bar */
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: calc(var(--s-5) + var(--safe-top)) var(--s-3) var(--s-4);
+  padding-left: calc(var(--s-3) + var(--safe-left));
+}
+
+.rail button {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-md);
+  color: var(--ink-2);
+  font-size: var(--t-md);
+  font-weight: 500;
+  text-align: left;
+}
+
+.rail button.active {
+  color: var(--primary);
+  background: var(--surface-2);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Generic content block — same surface language as a list-group, for         */
+/* controls that aren't rows (arm control, sparkline, forms inside a sheet).   */
+/* -------------------------------------------------------------------------- */
+
+.block {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+}
+
+.block-note {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  margin-top: var(--s-3);
+}
+
+.block-note.tone-armed {
+  color: var(--armed);
+  font-weight: 500;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Empty states                                                                */
+/* -------------------------------------------------------------------------- */
+
+.empty {
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.empty strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--t-md);
+  font-weight: 600;
+  margin-bottom: var(--s-1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Skeletons — shaped like the rows they replace, never a spinner             */
+/* -------------------------------------------------------------------------- */
+
+.skel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 52px;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.list-group > .skel-row:last-child { border-bottom: none; }
+
+.skel-block {
+  height: 12px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Forms                                                                       */
+/* -------------------------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) 0;
+}
+
+.field label {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-size: var(--t-md);
+  font-family: inherit;
+}
+
+.field input.mono {
+  font-family: var(--font-mono);
+}
+
+.field textarea {
+  padding: var(--s-3);
+  min-height: 88px;
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.field-hint {
+  font-size: var(--t-xs);
+  color: var(--ink-3);
+}
+
+.field-error {
+  font-size: var(--t-xs);
+  color: var(--loss);
+}
+
+.field-row {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.field-row .field {
+  flex: 1;
+}
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  flex-shrink: 0;
+  transition: background var(--dur) var(--ease);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform var(--dur) var(--ease);
+}
+
+.switch.on {
+  background: var(--primary);
+}
+
+.switch.on::after {
+  transform: translateX(18px);
+  background: var(--primary-ink);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Toasts                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.toast-host {
+  position: fixed;
+  left: var(--s-4);
+  right: var(--s-4);
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--s-3));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  pointer-events: none;
+}
+
+@media (min-width: 900px) and (orientation: landscape) {
+  .toast-host {
+    bottom: calc(var(--safe-bottom) + var(--s-4));
+  }
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--t-sm);
+  animation: toast-in var(--dur) var(--ease) forwards;
+}
+
+.toast.error {
+  color: var(--loss);
+}
+
+.toast.ok {
+  color: var(--profit);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Misc utility                                                                */
+/* -------------------------------------------------------------------------- */
+
+.stack { display: flex; flex-direction: column; }
+.gap-1 { gap: var(--s-1); }
+.gap-2 { gap: var(--s-2); }
+.gap-3 { gap: var(--s-3); }
+.gap-4 { gap: var(--s-4); }
+.row-flex { display: flex; align-items: center; }
+.spread { display: flex; align-items: center; justify-content: space-between; }
+.muted { color: var(--ink-2); }
+.faint { color: var(--ink-3); }
+.center { text-align: center; }
+.px-4 { padding-left: var(--s-4); padding-right: var(--s-4); }
+.pt-4 { padding-top: var(--s-4); }
+.pb-6 { padding-bottom: var(--s-6); }

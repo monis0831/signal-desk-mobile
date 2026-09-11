@@ -150,6 +150,29 @@ export type HistoryPayload = {
   max_drawdown: { absolute: number; percent: number };
 };
 
+/** A configured MT5 account (one terminal, one broker) and its live state.
+ *  Distinct from `Account` below, which is the raw account_info() snapshot. */
+export type TradingAccountStatus =
+  | "connected" | "connecting" | "stopped" | "disabled" | "error";
+
+export type TradingAccount = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  server: string;
+  login: number;
+  lot_size: number;
+  max_lot_size: number;
+  max_open_trades: number;
+  status: TradingAccountStatus;
+  detail: string;
+  /** "" until the worker has connected and read it from the terminal. */
+  margin_mode: string;
+  balance: number | null;
+  equity: number | null;
+  restarts: number;
+};
+
 export type Account = {
   login: number;
   server: string;
@@ -320,6 +343,7 @@ export type EngineState = {
   engine: { running: boolean; mt5_package: boolean };
   telegram: { status: string; detail: string; login_pending: string };
   mt5: { status: string; detail: string };
+  accounts: TradingAccount[];
   trading: {
     bot_enabled: boolean;
     dry_run: boolean;
@@ -337,6 +361,8 @@ export type EngineState = {
 };
 
 export type Position = {
+  /** Which configured account this row belongs to. */
+  account_id?: string;
   ticket: number;
   symbol: string;
   direction: "BUY" | "SELL";
@@ -354,6 +380,8 @@ export type Position = {
 };
 
 export type PendingOrder = {
+  /** Which configured account this row belongs to. */
+  account_id?: string;
   ticket: number;
   symbol: string;
   kind: string;
@@ -483,6 +511,29 @@ export function createApi(conn: Connection) {
 
     health: () => call<{ ok: boolean; version: string; running: boolean }>("GET", "/api/health"),
     state: () => call<EngineState>("GET", "/api/state"),
+
+    listAccounts: () =>
+      call<{ accounts: TradingAccount[] }>("GET", "/api/accounts"),
+
+    createAccount: (body: Partial<TradingAccount> & { password?: string }) =>
+      call<{ accounts: TradingAccount[] }>("POST", "/api/accounts", body),
+
+    updateAccount: (
+      id: string,
+      body: Partial<TradingAccount> & { password?: string },
+    ) =>
+      call<{ accounts: TradingAccount[] }>(
+        "PATCH", `/api/accounts/${encodeURIComponent(id)}`, body),
+
+    deleteAccount: (id: string) =>
+      call<{ accounts: TradingAccount[] }>(
+        "DELETE", `/api/accounts/${encodeURIComponent(id)}`),
+
+    closePositionOn: (accountId: string, ticket: number, volume?: number) =>
+      call<{ ok: boolean; detail: string }>(
+        "POST",
+        `/api/accounts/${encodeURIComponent(accountId)}/positions/${ticket}/close`,
+        volume ? { volume } : {}),
 
     startEngine: () => call<{ running: boolean }>("POST", "/api/engine/start"),
     stopEngine: () => call<{ running: boolean }>("POST", "/api/engine/stop"),

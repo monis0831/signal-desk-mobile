@@ -17,9 +17,23 @@ import { Sparkline } from "../components/Sparkline";
 import { PnL, Badge } from "../components/PnL";
 import { amount, lots, orderKind, actionLabel } from "../lib/format";
 import type { TabId } from "../components/Nav";
+import type { DotTone } from "../components/StatusDot";
+import type { TradingAccountStatus } from "../lib/api";
+
+/** Map an account's five states onto the dot's five tones. Exhaustive on
+ *  purpose: a new status must be placed here, not fall through to grey. */
+function accountTone(status: TradingAccountStatus): DotTone {
+  switch (status) {
+    case "connected":  return "ok";
+    case "connecting": return "connecting";
+    case "error":      return "error";
+    case "stopped":    return "idle";
+    case "disabled":   return "idle";
+  }
+}
 
 export function Home({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
-  const { state, trades } = useDesk();
+  const { state, trades, accounts, focusedAccount, setFocusedAccount } = useDesk();
   const { positions, orders, loaded } = usePositionsOrders();
 
   const account = state?.account ?? null;
@@ -76,6 +90,27 @@ export function Home({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           value={mt5Status}
         />
       </ListSection>
+
+      {/* Only shown once there is more than one account: the single-account
+          case keeps today's screen exactly, with no new chrome to learn. */}
+      {accounts.length > 1 ? (
+        <ListSection
+          label="Accounts"
+          note={focusedAccount ? "Tap the highlighted account again to view all." : "Tap an account to focus on it."}
+        >
+          {accounts.map((a) => (
+            <Row
+              key={a.id}
+              leading={<StatusDot tone={accountTone(a.status)} label={a.status} />}
+              title={focusedAccount === a.id ? `${a.label} · viewing` : a.label}
+              subtitle={[a.status, a.margin_mode].filter(Boolean).join(" · ")}
+              value={<span className="mono">{a.balance == null ? "—" : amount(a.balance)}</span>}
+              onClick={() => setFocusedAccount(focusedAccount === a.id ? null : a.id)}
+              chevron
+            />
+          ))}
+        </ListSection>
+      ) : null}
 
       <ListSection label="Account" note={account ? `${account.name} · account ${account.login} on ${account.server}` : "Connect MetaTrader 5 to read the account."}>
         <Row title="Equity" value={<span className="mono row-value-lg">{account ? amount(account.equity) : "—"}</span>} />

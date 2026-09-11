@@ -38,6 +38,7 @@ import {
   type ParsedSignal,
   type Position,
   type TradeEvent,
+  type TradingAccount,
 } from "./api";
 import { clearPairing, loadPairing, savePairing, type Pairing } from "./pairing";
 
@@ -78,6 +79,11 @@ type Ctx = {
   livePositions: Position[] | null;
   authPrompt: string | null;
   toasts: Toast[];
+  /** Every configured account, newest state from /api/state. */
+  accounts: TradingAccount[];
+  /** The account the user is looking at, or null for "all accounts". */
+  focusedAccount: string | null;
+  setFocusedAccount: (id: string | null) => void;
   refresh: () => Promise<void>;
   toast: (text: string, tone?: Toast["tone"]) => void;
   dismissToast: (id: number) => void;
@@ -119,6 +125,10 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   const [trades, setTrades] = useState<TradeEvent[]>([]);
   const [livePositions, setLivePositions] = useState<Position[] | null>(null);
   const [authPrompt, setAuthPrompt] = useState<string | null>(null);
+  // Deliberately NOT persisted to localStorage: a stale focus on an account
+  // that has since been deleted would show an empty screen with no reason.
+  const [focusedAccount, setFocusedAccount] = useState<string | null>(null);
+  const accounts = state?.accounts ?? [];
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const idRef = useRef(0);
@@ -372,6 +382,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
     () => ({
       status, unauthorizedReason, pairing, api, state, stateAt, streaming, online,
       logs, feed, trades, livePositions, authPrompt, toasts,
+      accounts, focusedAccount, setFocusedAccount,
       refresh, toast, dismissToast,
       clearAuthPrompt: () => setAuthPrompt(null),
       pair, unpair, run,
@@ -379,6 +390,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
     [
       status, unauthorizedReason, pairing, api, state, stateAt, streaming, online,
       logs, feed, trades, livePositions, authPrompt, toasts,
+      accounts, focusedAccount,
       refresh, toast, dismissToast, pair, unpair, run,
     ],
   );
